@@ -11,6 +11,8 @@ const scrollerAction = {
   LOADING: 'LOADING',
   LOAD_MORE: 'LOAD_MORE',
   SCROLL: 'SCROLL',
+  UPDATE_UPPER: 'UPDATE_UPPER',
+  UPDATE_UNDER: 'UPDATE_UNDER',
 };
 
 type StateReducerType = (ScrollerState,
@@ -27,6 +29,10 @@ const stateReducer: StateReducerType = (state, action) => {
       const currentItems = state.page === 1 ? list : [...state.items, ...list];
       return {...state, loading: false,
         isControl, items: currentItems, isComplete};
+    case scrollerAction.UPDATE_UPPER:
+      return {...state, upperHolderHeight: action.payload};
+    case scrollerAction.UPDATE_UNDER:
+      return {...state, underHolderHeight: action.payload};
     case scrollerAction.LOADING:
       return {...state, loading: true};
     case scrollerAction.LOAD_MORE:
@@ -39,7 +45,7 @@ const stateReducer: StateReducerType = (state, action) => {
 export const Scroller = ({
   averageHeight = 350,
   element: Element,
-  length: customLength,
+  length: customLength = 12,
   style = {},
   onFetch,
   upperRender,
@@ -64,6 +70,8 @@ export const Scroller = ({
     isControl,
     isComplete,
     loading,
+    upperHolderHeight,
+    underHolderHeight,
   } = state;
   const canFetchRef = useRef(!items.length);
 
@@ -72,15 +80,32 @@ export const Scroller = ({
       [items, index, length],
   );
 
-  const upperHolderHeight = useMemo(() => averageHeight * index, [
-    index,
-    averageHeight,
-  ]);
+  useEffect(() => {
+    const height = index * averageHeight;
+    dispatchState({
+      type: scrollerAction.UPDATE_UPPER,
+      payload: height > 0 ? height : 0,
+    });
+  }, [averageHeight, index]);
 
-  const underHolderHight = useMemo(() => {
-    const v = averageHeight * (items.length - index - length);
-    return v >= 0 ? v : 0;
-  }, [averageHeight, items.length, index, length]);
+  useEffect(() => {
+    const v = averageHeight * (items.length - length) - upperHolderHeight;
+    const height = v > 0 ? v : 0;
+    dispatchState({
+      type: scrollerAction.UPDATE_UNDER,
+      payload: height,
+    });
+  }, [averageHeight, items.length, length, upperHolderHeight]);
+
+  // const upperHolderHeight = useMemo(() => averageHeight * index, [
+  //   index,
+  //   averageHeight,
+  // ]);
+
+  // const underHolderHight = useMemo(() => {
+  //   const v = averageHeight * (items.length - index - length);
+  //   return v >= 0 ? v : 0;
+  // }, [averageHeight, items.length, index, length]);
 
   // update store
   useEffect(() => {
@@ -94,7 +119,7 @@ export const Scroller = ({
     dispatchState({
       type: scrollerAction.UPDATE_SOURCE,
       payload: {
-        items: packItems(source),
+        items: source,
         isComplete: noNewItem, isControl: true},
     });
     if (!noNewItem) {
@@ -118,12 +143,12 @@ export const Scroller = ({
       setTopCount(customLength * 0.2);
       return;
     }
-    if (items.length) {
-      const len = Math.floor(items.length * 0.7);
-      setLength(len);
-      setTopCount(Math.floor(len * 0.2));
-    }
-  }, [customLength, items.length, page]);
+    // if (items.length) {
+    //   const len = Math.floor(items.length * 0.7);
+    //   setLength(len);
+    //   setTopCount(Math.floor(len * 0.2));
+    // }
+  }, [customLength]);
 
   useEffect(() => {
     if (!canFetchRef.current) return;
@@ -156,16 +181,16 @@ export const Scroller = ({
         direction &&
         !loading &&
         !isComplete &&
-        cd.scrollTop + 3000 > cd.scrollHeight - cd.clientHeight
+        cd.scrollTop + averageHeight * 3 > cd.scrollHeight - cd.clientHeight
       ) {
         dispatchState({type: scrollerAction.LOAD_MORE});
         canFetchRef.current = true;
       }
 
-      const upperRenderHeight = upperRenderRef.current ?
-      upperRenderRef.current.clientHeight : 0;
-      const startIndex = Math.floor(
-          (cd.scrollTop - topCount * averageHeight - upperRenderHeight) /
+      // const upperRenderHeight = upperRenderRef.current ?
+      // upperRenderRef.current.clientHeight : 0;
+      const startIndex = Math.round(
+          (cd.scrollTop - topCount * averageHeight) /
           averageHeight,
       );
       dispatchState({
@@ -196,11 +221,11 @@ export const Scroller = ({
       {activeItems.map((item) => <Element key={item.index} {...item.data} />)}
       <div
         style={{
-          height: underHolderHight,
+          height: underHolderHeight,
         }}
       />
     </div>
   );
 };
 
-export default forwardRef(Scroller);
+export default forwardRef<any, ScrollerProps>(Scroller);

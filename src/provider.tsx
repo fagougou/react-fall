@@ -1,22 +1,25 @@
-import React, {useRef} from 'react';
+import React, {useState} from 'react';
 import ScrollContext from './context';
 import ProviderProps from './types/providerProps';
 import ScrollerState from './types/scrollerState';
 import scrollerDefaultState from './scroller-default-state';
+import isEqual from 'lodash/isEqual';
 
 export const Provider = (
     {children,
     }: ProviderProps) => {
-  const stateRef = useRef<ScrollerState>(scrollerDefaultState);
+  const [state, setState] = useState(scrollerDefaultState);
 
-  const handleUpdate = (state: ScrollerState) => {
-    stateRef.current = state;
+  const handleUpdate = (s: ScrollerState) => {
+    if (!isEqual(state, s)) {
+      setState(s);
+    }
   };
 
   return (
     <ScrollContext.Provider
       value={{
-        state: stateRef.current,
+        state,
         update: handleUpdate,
       }}>
       {React.Children.only(children)}

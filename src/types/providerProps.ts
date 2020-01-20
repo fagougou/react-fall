@@ -1,7 +1,7 @@
 interface ProviderProps {
   children: React.ReactNode
-  source: undefined | []
-  name: string | undefined
+  source?: []
+  name?: string
 }
 
 export default ProviderProps;
